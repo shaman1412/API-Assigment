@@ -44,7 +44,7 @@ var checkwithcache = function(err,res,docs,id){
 				{	
 					console.log('no cache');
 					docs = JSON.stringify(docs);
-					client.setex(id, 10, docs);
+					client.setex(id, 60, docs);
 					success(res,docs);
 				}
 			} 	
@@ -97,6 +97,9 @@ app.post('/v1/task/insert',function(req, res){
 			}
 			else
 			{	
+				client.del(json.para1);
+				client.del('key_all');
+				console.log('cache clear');
 				success(res,docs);
 			}
 		} 
@@ -105,10 +108,11 @@ app.post('/v1/task/insert',function(req, res){
 app.patch('/v1/task/update/:id', function(req, res){
 	var id = req.params.id;
 	var json  = req.body;
-	db.list.findAndModify({
-    query: { id: id },
-    update: { $set: { task_subject : json.para1 , task_detail : json.para2} },
-    new: true}, function(err, docs) {
+	db.list.update(
+  	{ id: id },
+ 	{ $set: { task_subject : json.para1 , task_detail : json.para2} },  
+    { multi: true }
+   , function(err, docs) {
 		if(err)
 		{
 		errofunction(res);
@@ -121,10 +125,13 @@ app.patch('/v1/task/update/:id', function(req, res){
 			 res.send('<h1>' + res.statusCode +'</h1><h2> Not Found list ID</h2>');
 			}
 			else{
+
+				 client.del(id);
+				 client.del('key_all');
 				 res.statusCode = 201;
 				 console.log(res.statusCode);
 				 
-				res.send('<h1>update ID'+ docs.id + '</h1>');
+				res.send('<h1>update ID'+ id + '</h1>');
 			}
 			
 		}
@@ -134,11 +141,11 @@ app.patch('/v1/task/setstatus/:id', function(req, res){
 	var id = req.params.id;
 	var json  = req.body;
 	var getstatus = parseInt(json.para1);
-		db.list.findAndModify({
-		query: { id: id },
-		update: { $set: { status : getstatus } },
-		new: true
-		}, function(err, docs, lastErrorObject) {
+		db.list.update(
+		 { id: id },
+		 { $set: { status : getstatus } },
+		 { multi: true }
+		, function(err, docs) {
 		if(err){
 			errofunction(res);
 		}
@@ -148,8 +155,10 @@ app.patch('/v1/task/setstatus/:id', function(req, res){
 			}
 			else
 			{	
+				client.del(id);
+				client.del('key_all');
 				res.statusCode = 200;
-				res.send('<h1>update id:'+ docs.id + '</h1>');
+				res.send('<h1>update id:'+ id + '</h1>');
 			}
 		} 		
 	});
@@ -166,6 +175,8 @@ app.delete('/v1/task/del/:id',function(req, res){
 			}
 			else
 			{	
+				client.del(id);
+				client.del('key_all');
 				res.statusCode = 200;
 				res.send('<h1>Delete id:' + id + '</h1>');
 			}
